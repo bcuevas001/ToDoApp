@@ -7,20 +7,20 @@
 //
 
 import UIKit
-
+import CoreData
 class TodoListViewController: UITableViewController {
 
   //  var itemArray = ["Study iOS", "Go Biking", "Eat"];
     var itemArray = [Item]();
     let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist");
-
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext;
     //let defaults = UserDefaults.standard;
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         
-        print(dataFilePath);
+        print(dataFilePath!);
         
 //        let newItem = Item();
 //        newItem.title = "Find Mike";
@@ -31,9 +31,6 @@ class TodoListViewController: UITableViewController {
 //        itemArray.append(newItem2);
         
         loadItems();
-        
-        
-
     }
     
 
@@ -57,25 +54,18 @@ class TodoListViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        //print(itemArray[indexPath.row]);
-        
+
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done;
         saveItems();
         tableView.deselectRow(at: indexPath, animated: true);
         
-//        if(tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark) {
-//            tableView.cellForRow(at: indexPath)?.accessoryType = .none;
-//        }
-//        else {
-//            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark;
-//        }
     }
     
     override func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
         let deleteAction = UITableViewRowAction(style: .default, title: "Delete") { (deleteAction, IndexPath) in
+            self.context.delete(self.itemArray[indexPath.row]);
             self.itemArray.remove(at: indexPath.row);
             self.saveItems();
-            self.tableView.reloadData();
         }
         deleteAction.backgroundColor = UIColor.red;
         return [deleteAction];
@@ -88,9 +78,11 @@ class TodoListViewController: UITableViewController {
         
         let alert = UIAlertController(title: "Add New Todey Item", message: "", preferredStyle: .alert);
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            
 
-            let newItem = Item();
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!;
+            newItem.done = false;
  
             self.itemArray.append(newItem);
             self.saveItems();
@@ -107,26 +99,23 @@ class TodoListViewController: UITableViewController {
     
     //MARK - Model Manipulation Methods
     func saveItems() {
-        let encoder = PropertyListEncoder();
         
         do {
-            let data = try encoder.encode(itemArray);
-            try data.write(to: dataFilePath!)
+            try context.save();
         } catch {
-            print("Error encoding item array, \(error)")
+            print("Error saving contextite, \(error)")
         }
         self.tableView.reloadData();
     }
     
     func loadItems() {
-      if let data = try? Data(contentsOf: dataFilePath!) {
-            let decoder = PropertyListDecoder()
-            do {
-                itemArray = try decoder.decode([Item].self, from: data)
-            }
-            catch {
-                print("Error: \(error)");
-            }
+        
+        let request: NSFetchRequest<Item> = Item.fetchRequest();
+        do {
+        itemArray =  try context.fetch(request);
+        }
+        catch {
+            print("Fetch error: \(error)");
         }
     }
     
