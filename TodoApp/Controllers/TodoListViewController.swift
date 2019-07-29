@@ -22,6 +22,7 @@ class TodoListViewController: UITableViewController {
         
         print(dataFilePath!);
         
+        
 //        let newItem = Item();
 //        newItem.title = "Find Mike";
 //        itemArray.append(newItem);
@@ -29,7 +30,7 @@ class TodoListViewController: UITableViewController {
 //        let newItem2 = Item();
 //        newItem2.title = "Study";
 //        itemArray.append(newItem2);
-        
+
         loadItems();
     }
     
@@ -108,18 +109,44 @@ class TodoListViewController: UITableViewController {
         self.tableView.reloadData();
     }
     
-    func loadItems() {
+    func loadItems(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
         
-        let request: NSFetchRequest<Item> = Item.fetchRequest();
         do {
         itemArray =  try context.fetch(request);
         }
         catch {
             print("Fetch error: \(error)");
         }
+        tableView.reloadData();
+    }
+}
+
+//MARK: - Search Bar Methods
+extension TodoListViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest();
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!);
+        request.predicate = predicate;
+        
+        let sortDescriptor = NSSortDescriptor(key: "title", ascending: true);
+        
+        request.sortDescriptors = [sortDescriptor];
+        
+        loadItems(with: request)
+
     }
     
-    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if(searchBar.text!.count == 0) {
+            loadItems();
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder();
+            }
+        }
+    }
     
 }
 
